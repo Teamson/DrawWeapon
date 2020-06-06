@@ -58,19 +58,33 @@ export default class GameUI extends Laya.Scene {
         param && param()
         Laya.timer.frameLoop(1, this, this.checkIsNoPower)
 
+        let showOL: boolean = false
         if (!WxApi.launchGameUI) {
-            WxApi.GetLaunchParam((param) => {
+            WxApi.GetLaunchParam((p) => {
                 let et = PlayerDataMgr.getPlayerData().exitTime
                 if (et > 0) {
                     let curT = new Date().getTime()
                     let diffT = Math.floor((curT - et) / 1000 / 60)
                     if (diffT >= 1) {
                         Laya.Scene.open('MyScenes/OfflineUI.scene', false, diffT)
+                        showOL = true
                     }
                 }
             })
             WxApi.launchGameUI = true
             GameLogic.Share.checkCanUpgrade()
+        }
+        if (!showOL && !WxApi.hadShowFriendUI) {
+            WxApi.hadShowFriendUI = true
+            JJMgr.instance.openScene(SceneDir.SCENE_FRIENDGAME, false, {
+                closeCallbackFun: () => {
+                    if (JJMgr.instance.dataConfig.front_index_video) {
+                        AdMgr.instance.showVideo(() => { })
+                    } else {
+                        JJMgr.instance.openScene(SceneDir.SCENE_RECOMMENDUI, false)
+                    }
+                }
+            })
         }
 
         this['drawTips'].visible = PlayerDataMgr.getPlayerData().grade <= 2
@@ -380,6 +394,7 @@ export default class GameUI extends Laya.Scene {
         let cb: Function = () => {
             WxApi.aldEvent('请求帮助：成功')
             this.visibleGameOverNode(false)
+            GameLogic.Share.isOver = false
             GameLogic.Share.isHelpStart = true
             GameLogic.Share.tempPlayerCount = 1
             GameLogic.Share.restartGame()
@@ -387,46 +402,45 @@ export default class GameUI extends Laya.Scene {
         ShareMgr.instance.shareGame(cb)
     }
     giveUpBtnCB() {
-        let cb = () => {
-            Laya.Scene.open('MyScenes/KillBossUI.scene', true, () => {
-                JJMgr.instance.openScene(SceneDir.SCENE_FULLGAMEUI, false, {
-                    grade: PlayerDataMgr.getPlayerData().grade,
-                    continueCallbackFun: () => {
-                        WxApi.aldEvent('第' + PlayerDataMgr.getPlayerData().grade + '关：失败')
-                        GameLogic.Share.isHelpStart = false
-                        GameLogic.Share.gradeIndex = 0
-                        PlayerDataMgr.getPlayerData().gradeIndex = 0
-                        PlayerDataMgr.setPlayerData()
-                        this.visibleGameOverNode(false)
-                        GameLogic.Share.restartGame()
-                        JJMgr.instance.openScene(SceneDir.SCENE_NEWGAMEUI, false)
-                    }
-                })
-            })
-        }
-        Laya.Scene.open('MyScenes/KillBossUI.scene', true, () => {
-            if (PlayerDataMgr.getPlayerData().grade - 1 >= JJMgr.instance.dataConfig.front_auto_history_level) {
-                JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI, false, {
-                    closeCallbackFun: cb
-                })
-            } else {
-                cb()
-            }
-        })
-
-        // JJMgr.instance.openScene(SceneDir.SCENE_FULLGAMEUI, false, {
-        //     grade: PlayerDataMgr.getPlayerData().grade,
-        //     continueCallbackFun: () => {
-        //         WxApi.aldEvent('第' + PlayerDataMgr.getPlayerData().grade + '关：失败')
-        //         GameLogic.Share.isHelpStart = false
-        //         GameLogic.Share.gradeIndex = 0
-        //         PlayerDataMgr.getPlayerData().gradeIndex = 0
-        //         PlayerDataMgr.setPlayerData()
-        //         this.visibleGameOverNode(false)
-        //         GameLogic.Share.restartGame()
-        //         JJMgr.instance.openScene(SceneDir.SCENE_NEWGAMEUI, false)
+        // let cb = () => {
+        //     GameLogic.Share._playerNode.active = true
+        //     GameLogic.Share._aiNode.active = true
+        //     Laya.Scene.open('MyScenes/GameUI.scene', false)
+        //     WxApi.aldEvent('第' + PlayerDataMgr.getPlayerData().grade + '关：失败')
+        //     GameLogic.Share.isHelpStart = false
+        //     GameLogic.Share.gradeIndex = 0
+        //     PlayerDataMgr.getPlayerData().gradeIndex = 0
+        //     PlayerDataMgr.setPlayerData()
+        //     this.visibleGameOverNode(false)
+        //     GameLogic.Share.restartGame()
+        //     JJMgr.instance.openScene(SceneDir.SCENE_NEWGAMEUI, false)
+        // }
+        // GameLogic.Share._playerNode.active = false
+        // GameLogic.Share._aiNode.active = false
+        // WxApi.tempGrade = PlayerDataMgr.getPlayerData().grade
+        // Laya.Scene.open('MyScenes/KillBossUI.scene', true, () => {
+        //     if (PlayerDataMgr.getPlayerData().grade >= JJMgr.instance.dataConfig.front_auto_history_level) {
+        //         JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI, false, {
+        //             closeCallbackFun: cb
+        //         })
+        //     } else {
+        //         cb()
         //     }
         // })
+
+        JJMgr.instance.openScene(SceneDir.SCENE_FULLGAMEUI, false, {
+            grade: PlayerDataMgr.getPlayerData().grade,
+            continueCallbackFun: () => {
+                WxApi.aldEvent('第' + PlayerDataMgr.getPlayerData().grade + '关：失败')
+                GameLogic.Share.isHelpStart = false
+                GameLogic.Share.gradeIndex = 0
+                PlayerDataMgr.getPlayerData().gradeIndex = 0
+                PlayerDataMgr.setPlayerData()
+                this.visibleGameOverNode(false)
+                GameLogic.Share.restartGame()
+                JJMgr.instance.openScene(SceneDir.SCENE_NEWGAMEUI, false)
+            }
+        })
     }
 
     createHpBar(node: Laya.Sprite3D) {

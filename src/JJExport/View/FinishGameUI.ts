@@ -3,6 +3,8 @@ import JJUtils from "../Common/JJUtils"
 import AdMgr from "../../Mod/AdMgr"
 import Utility from "../../Mod/Utility"
 import PlayerDataMgr from "../../Libs/PlayerDataMgr"
+import WxApi from "../../Libs/WxApi"
+import GameLogic from "../../Crl/GameLogic"
 
 export default class FinishGameUI extends Laya.Scene {
     constructor() {
@@ -33,13 +35,21 @@ export default class FinishGameUI extends Laya.Scene {
                 let rp = Utility.getRandomItemInArr(this.fingerVecArr)
                 this['finger'].x = rp.x
                 this['finger'].y = this.navList.y + rp.y
-
+                this['bounesCoin'].y = this.navList.y - 260
             }
             if (param.from) {
                 this.from = param.from
             }
         }
 
+        this['bounesCoin'].visible = GameLogic.Share.gotKillBossBounes
+        if (GameLogic.Share.gotKillBossBounes) {
+            GameLogic.Share.gotKillBossBounes = false
+            let c = Utility.GetRandom(300, 1000)
+            this['bounesCoin'].text = '成功领取' + c + '金币'
+            Utility.tMove2D(this['bounesCoin'], this['bounesCoin'].x, this['bounesCoin'].y - 100, 2000, () => { this['bounesCoin'].visible = false })
+            PlayerDataMgr.changeCoin(c)
+        }
 
         // if (PlayerDataMgr.getPlayerData().grade >= JJMgr.instance.dataConfig.front_auto_history_level)
         //     JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI, false)

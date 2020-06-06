@@ -39,8 +39,12 @@ export default class GameLogic {
 
     public tempPlayerCount: number = 0
 
+    public isOver: boolean = false
+
+    public gotKillBossBounes:boolean = false
+
     constructor() {
-        localStorage.clear()
+        //localStorage.clear()
         //初始化广告
         AdMgr.instance.initAd()
         //加载JSON
@@ -68,12 +72,16 @@ export default class GameLogic {
             localStorage.setItem('front_share_number', WxApi.front_share_number.toString())
         })
         //初始化导出
-        JJMgr.instance.initJJ(WxApi.version, () => {
-            WxApi.calculateShareNumber()
-            //初始化分享
-            ShareMgr.instance.initShare()
-            //加载图集
-            this.loadAtlas()
+        WxApi.LoginWx((code, query) => {
+            JJMgr.instance.initJJ(code, WxApi.version, (openid) => {
+                WxApi.calculateShareNumber()
+                //初始化分享
+                ShareMgr.instance.initShare()
+                //加载图集
+                this.loadAtlas()
+                Laya.Browser.window.wx.aldSendOpenid(openid)
+                console.log('上报openid:', openid)
+            })
         })
     }
 
@@ -371,6 +379,7 @@ export default class GameLogic {
             if (this.gradeIndex >= 4) {
                 //关卡胜利
                 this.tempPlayerCount = 0
+                WxApi.tempGrade = PlayerDataMgr.getPlayerData().grade
                 PlayerDataMgr.getPlayerData().grade += 1
                 PlayerDataMgr.getPlayerData().gradeIndex = 0
                 PlayerDataMgr.setPlayerData()
@@ -379,10 +388,12 @@ export default class GameLogic {
                     if (PlayerDataMgr.getPlayerData().grade - 1 >= JJMgr.instance.dataConfig.front_auto_history_level) {
                         JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI, false, {
                             closeCallbackFun: () => {
+                                this._playerNode.active = true
                                 Laya.Scene.open('MyScenes/FinishUI.scene', false)
                             }
                         })
                     } else {
+                        this._playerNode.active = true
                         Laya.Scene.open('MyScenes/FinishUI.scene', false)
                     }
                 })
@@ -414,9 +425,30 @@ export default class GameLogic {
             })
         }
         //失败
-        if (this._playerNode.numChildren <= 0) {
+        if (this._playerNode.numChildren <= 0 && !this.isOver) {
+            this.isOver = true
             this.tempPlayerCount = 0
-            GameUI.Share.visibleGameOverNode(true)
+            //GameUI.Share.visibleGameOverNode(true)
+            Laya.Scene.close('MyScenes/GameUI.scene')
+            let cb = () => {
+                GameLogic.Share._playerNode.active = true
+                GameLogic.Share._aiNode.active = true
+                Laya.Scene.open('MyScenes/GameUI.scene', false, () => {
+                    GameUI.Share.visibleGameOverNode(true)
+                })
+            }
+            GameLogic.Share._playerNode.active = false
+            GameLogic.Share._aiNode.active = false
+            WxApi.tempGrade = PlayerDataMgr.getPlayerData().grade
+            Laya.Scene.open('MyScenes/KillBossUI.scene', false, () => {
+                if (PlayerDataMgr.getPlayerData().grade >= JJMgr.instance.dataConfig.front_auto_history_level) {
+                    JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI, false, {
+                        closeCallbackFun: cb
+                    })
+                } else {
+                    cb()
+                }
+            })
         }
     }
 
@@ -472,15 +504,19 @@ export default class GameLogic {
         }
     }
 
+    hadAutoShowUpgrade: boolean = false
     checkCanUpgrade() {
         let c = PlayerDataMgr.getPlayerData().coin
-        if (PlayerDataMgr.getPlayerData().gradeIndex == 0 &&
+        if (!this.hadAutoShowUpgrade && PlayerDataMgr.getPlayerData().gradeIndex == 0 &&
             (c >= PlayerDataMgr.getUpgradePlayerCountLvCost() || c >= PlayerDataMgr.getUpgradePlayerPowerLvCost() || c >= PlayerDataMgr.getUpgradeOfflineLvCost())) {
+            this.hadAutoShowUpgrade = true
             GameUI.Share.upgradeBtnCB()
         }
     }
 
     restartGame() {
+        this.isOver = false
+        GameLogic.Share.gotKillBossBounes = false
         this.gameStarted = false
         if (PlayerDataMgr.getPlayerData().gradeIndex == 0) {
             this._camera.transform.position = this.camStartPos

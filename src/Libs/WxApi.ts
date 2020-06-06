@@ -5,7 +5,8 @@ import AdMgr from "../Mod/AdMgr"
 export default class WxApi {
     public static UnityPath: string = 'LayaScene_MyScene/Conventional/'
 
-    public static version: string = '1.0.13'
+    public static openId: string = ''
+    public static version: string = '1.0.14'
     public static isVibrate: boolean = true
     public static isMusic: boolean = true
     public static OnShowFun: Function = null
@@ -23,6 +24,11 @@ export default class WxApi {
     public static launchGameUI: boolean = false
 
     public static firstStartGame: boolean = false
+
+    public static isKillBossUI: boolean = false
+    public static fromKillBossUI: boolean = false
+
+    public static tempGrade: number = 1
 
     //微信登录
     public static LoginWx(cb: Function) {

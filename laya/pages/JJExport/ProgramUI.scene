@@ -2,11 +2,11 @@
     "x":0,
     "type":"Scene",
     "selectedBox":2,
-    "selecteID":18,
+    "selecteID":24,
     "searchKey":"Scene",
     "props":{"width":750,"sceneColor":"#000000","runtime":"JJExport/View/ProgramUI.ts","height":1624},
     "nodeParent":-1,
-    "maxID":23,
+    "maxID":25,
     "label":"Scene",
     "isOpen":true,
     "isDirectory":true,
@@ -93,14 +93,13 @@
             "props":{"y":205,"x":0,"var":"navList","repeatY":8,"repeatX":1,"height":1130},
             "nodeParent":2,
             "label":"navList",
-            "isOpen":true,
+            "isOpen":false,
             "isDirectory":true,
             "isAniNode":true,
             "hasChild":true,
             "compId":22,
             "child":[
                 {
-                    "x":30,
                     "type":"Box",
                     "searchKey":"Box",
                     "props":{"renderType":"render"},
@@ -113,7 +112,6 @@
                     "compId":21,
                     "child":[
                         {
-                            "x":45,
                             "type":"Image",
                             "searchKey":"Image,item",
                             "props":{"width":750,"name":"item","height":140},
@@ -126,7 +124,6 @@
                             "compId":9,
                             "child":[
                                 {
-                                    "x":60,
                                     "type":"Image",
                                     "searchKey":"Image,icon",
                                     "props":{"y":20,"x":65,"width":100,"name":"icon","height":100},
@@ -139,7 +136,6 @@
                                     "compId":16,
                                     "child":[
                                         {
-                                            "x":75,
                                             "type":"Sprite",
                                             "searchKey":"Sprite",
                                             "props":{"y":50,"x":50,"renderType":"mask"},
@@ -152,7 +148,6 @@
                                             "compId":14,
                                             "child":[
                                                 {
-                                                    "x":90,
                                                     "type":"Circle",
                                                     "searchKey":"Circle",
                                                     "props":{"radius":50,"lineWidth":1,"fillColor":"#ff0000"},
@@ -168,7 +163,6 @@
                                         }]
                                 },
                                 {
-                                    "x":60,
                                     "type":"Label",
                                     "searchKey":"Label,name",
                                     "props":{"y":77,"x":241,"text":"游戏名字","name":"name","fontSize":36,"font":"Arial","color":"#000000","bold":false,"anchorY":0.5,"anchorX":0},
@@ -182,7 +176,6 @@
                                         ]
                                 },
                                 {
-                                    "x":60,
                                     "type":"Image",
                                     "searchKey":"Image,star",
                                     "props":{"y":77,"x":669,"skin":"JJExportRes/xcx (5).png","name":"star","anchorY":0.5,"anchorX":0.5},
@@ -196,7 +189,6 @@
                                         ]
                                 },
                                 {
-                                    "x":60,
                                     "type":"Image",
                                     "searchKey":"Image,line",
                                     "props":{"y":140,"x":750,"width":510,"skin":"JJExportRes/xcx (4).png","sizeGrid":"0,10,0,10","name":"line","anchorX":1},
@@ -211,6 +203,20 @@
                                 }]
                         }]
                 }]
+        },
+        {
+            "x":15,
+            "type":"Label",
+            "searchKey":"Label,bounesCoin",
+            "props":{"y":667,"x":375,"var":"bounesCoin","text":"成功领取666金币","strokeColor":"#000000","stroke":2,"fontSize":50,"font":"Arial","color":"#ffffff","anchorY":0.5,"anchorX":0.5},
+            "nodeParent":2,
+            "label":"bounesCoin",
+            "isDirectory":false,
+            "isAniNode":true,
+            "hasChild":false,
+            "compId":24,
+            "child":[
+                ]
         }],
     "animations":[
         {

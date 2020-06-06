@@ -2,6 +2,9 @@ import AdMgr from "../../Mod/AdMgr"
 import JJUtils from "../Common/JJUtils"
 import JJMgr, { SceneDir } from "../Common/JJMgr"
 import Utility from "../../Mod/Utility"
+import WxApi from "../../Libs/WxApi"
+import PlayerDataMgr from "../../Libs/PlayerDataMgr"
+import GameLogic from "../../Crl/GameLogic"
 
 export default class ProgramUI extends Laya.Scene {
     constructor() {
@@ -30,6 +33,15 @@ export default class ProgramUI extends Laya.Scene {
 
         this.starArr = Utility.shuffleArr(this.starArr)
         this.starArr = this.starArr.splice(0, 6)
+
+        this['bounesCoin'].visible = GameLogic.Share.gotKillBossBounes
+        if (GameLogic.Share.gotKillBossBounes) {
+            GameLogic.Share.gotKillBossBounes = false
+            let c = Utility.GetRandom(300, 1000)
+            this['bounesCoin'].text = '成功领取' + c + '金币'
+            Utility.tMove2D(this['bounesCoin'], this['bounesCoin'].x, this['bounesCoin'].y - 100, 2000, () => { this['bounesCoin'].visible = false })
+            PlayerDataMgr.changeCoin(c)
+        }
     }
 
     onClosed() {

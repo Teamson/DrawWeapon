@@ -4,6 +4,7 @@ import WxApi from "../Libs/WxApi"
 import JJMgr from "../JJExport/Common/JJMgr"
 import PlayerDataMgr from "../Libs/PlayerDataMgr"
 import Utility from "../Mod/Utility"
+import GameLogic from "../Crl/GameLogic"
 
 export default class KillBossUI extends Laya.Scene {
     constructor() {
@@ -19,6 +20,8 @@ export default class KillBossUI extends Laya.Scene {
 
     closeCallback: Function = null
 
+    hadShowBanner: boolean = false
+
     onOpened(param?: any) {
         if (param != null && param != undefined) {
             this.closeCallback = param
@@ -33,16 +36,30 @@ export default class KillBossUI extends Laya.Scene {
         Utility.visibleDelay(this.closeBtn, 3000)
 
         Laya.timer.frameLoop(1, this, this.decBar)
+
+        WxApi.isKillBossUI = true
+        WxApi.WxOnHide(() => {
+            if (WxApi.isKillBossUI) {
+                Laya.timer.once(100, this, () => { Laya.Scene.close('MyScenes/KillBossUI.scene') })
+            }
+        })
+
+        AdMgr.instance.hideBanner()
+
+        Laya.timer.once(5000, this, () => {
+            this.close()
+        })
     }
 
     onClosed() {
         Laya.timer.clearAll(this)
         this.closeCallback && this.closeCallback()
+        WxApi.isKillBossUI = false
     }
 
     decBar() {
         if (this.curProgress >= 1) {
-            Laya.timer.clearAll(this)
+            Laya.timer.clear(this, this.decBar)
             return
         }
 
@@ -55,22 +72,28 @@ export default class KillBossUI extends Laya.Scene {
     }
 
     clickBtnCBDown() {
+        GameLogic.Share.gotKillBossBounes = true
+        let curG = WxApi.tempGrade
+        let gGap = (curG - JJMgr.instance.dataConfig.front_box_gate) % (JJMgr.instance.dataConfig.front_box_everygate) == 0 &&
+            (curG - JJMgr.instance.dataConfig.front_box_gate) >= 0
+
+        if (!this.hadShowBanner && curG >= JJMgr.instance.dataConfig.front_box_gate && gGap) {
+            this.hadShowBanner = true
+            Laya.timer.once(1000, this, () => {
+                AdMgr.instance.showBanner()
+            })
+        }
+
         this.atkAni.play(0, false)
         this.clickBtn.scaleX = 1.2
         this.clickBtn.scaleY = 1.2
 
-        this.curProgress += 0.2
+        this.curProgress += 0.15
         if (this.curProgress > 1) {
             this.curProgress = 1
             this.barNode.value = 1
+            this.close()
             return
-        }
-        let curG = PlayerDataMgr.getPlayerData().grade - 1
-        let gGap = (curG - JJMgr.instance.dataConfig.front_box_gate) % (JJMgr.instance.dataConfig.front_box_everygate) == 0 &&
-            (curG - JJMgr.instance.dataConfig.front_box_gate) != 0
-        if (this.curProgress >= 0.8 && curG >= JJMgr.instance.dataConfig.front_box_gate &&
-            gGap) {
-            AdMgr.instance.showBanner()
         }
 
         this.createCoin()
@@ -91,12 +114,12 @@ export default class KillBossUI extends Laya.Scene {
     createCoin() {
         let coin = PrefabManager.instance().getItem(PrefabItem.Coin) as Laya.Image
         this.addChild(coin)
-        coin.pos(375, 520)
+        coin.pos(375, 500)
 
         let desPos = new Laya.Vector2(Math.random() * 400 - 200, Math.random() * 400 - 200)
-        Laya.Tween.to(coin, { x: desPos.x + 375, y: desPos.y + 520 }, 200);
+        Laya.Tween.to(coin, { x: desPos.x + 375, y: desPos.y + 500 }, 200);
 
-        Laya.timer.once(2000, this, () => {
+        Laya.timer.once(1000, this, () => {
             coin.destroy()
         })
     }

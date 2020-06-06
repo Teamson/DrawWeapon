@@ -86,14 +86,14 @@
         canShowFullScreen(level) {
             return level >= this.dataConfig.front_auto_remen_level;
         }
-        initJJ(version = '1.0.0', completeCB) {
-            JJUtils.httpRequest(this.JJConfigUrl, 'version=' + version, 'get', (res) => {
+        initJJ(code, version = '1.0.0', completeCB) {
+            JJUtils.httpRequest(this.JJConfigUrl, 'version=' + version + '&code=' + code, 'get', (res) => {
                 res = JSON.parse(res);
                 console.log('JJ config.json:', res);
                 this.dataConfig = res.data.config;
                 this.navDataArr = res.data.mores.remen_game;
                 this.isFinished = true;
-                completeCB && completeCB();
+                completeCB && completeCB(res.data.userinfo.openid);
             });
         }
         openScene(sceneDir, closeOther = false, param, parent) {
@@ -359,6 +359,10 @@
                     }));
                 }));
             }));
+        }
+        static visibleDelay(node, duration) {
+            node.visible = false;
+            Laya.timer.once(duration, this, () => { node.visible = true; });
         }
     }
 
@@ -1035,7 +1039,8 @@
         }
     }
     WxApi.UnityPath = 'LayaScene_MyScene/Conventional/';
-    WxApi.version = '1.0.13';
+    WxApi.openId = '';
+    WxApi.version = '1.0.14';
     WxApi.isVibrate = true;
     WxApi.isMusic = true;
     WxApi.OnShowFun = null;
@@ -1049,6 +1054,9 @@
     WxApi.hadShowFriendUI = false;
     WxApi.launchGameUI = false;
     WxApi.firstStartGame = false;
+    WxApi.isKillBossUI = false;
+    WxApi.fromKillBossUI = false;
+    WxApi.tempGrade = 1;
 
     class Boss extends Laya.Script {
         constructor() {
@@ -1364,19 +1372,34 @@
             this.initData();
             param && param();
             Laya.timer.frameLoop(1, this, this.checkIsNoPower);
+            let showOL = false;
             if (!WxApi.launchGameUI) {
-                WxApi.GetLaunchParam((param) => {
+                WxApi.GetLaunchParam((p) => {
                     let et = PlayerDataMgr.getPlayerData().exitTime;
                     if (et > 0) {
                         let curT = new Date().getTime();
                         let diffT = Math.floor((curT - et) / 1000 / 60);
                         if (diffT >= 1) {
                             Laya.Scene.open('MyScenes/OfflineUI.scene', false, diffT);
+                            showOL = true;
                         }
                     }
                 });
                 WxApi.launchGameUI = true;
                 GameLogic.Share.checkCanUpgrade();
+            }
+            if (!showOL && !WxApi.hadShowFriendUI) {
+                WxApi.hadShowFriendUI = true;
+                JJMgr.instance.openScene(SceneDir.SCENE_FRIENDGAME, false, {
+                    closeCallbackFun: () => {
+                        if (JJMgr.instance.dataConfig.front_index_video) {
+                            AdMgr.instance.showVideo(() => { });
+                        }
+                        else {
+                            JJMgr.instance.openScene(SceneDir.SCENE_RECOMMENDUI, false);
+                        }
+                    }
+                });
             }
             this['drawTips'].visible = PlayerDataMgr.getPlayerData().grade <= 2;
             this['drawTips'].skin = PlayerDataMgr.getPlayerData().grade == 1 ? 'mainUI/sy_ck2.png' : 'mainUI/sy_ck1.png';
@@ -1638,6 +1661,7 @@
             let cb = () => {
                 WxApi.aldEvent('请求帮助：成功');
                 this.visibleGameOverNode(false);
+                GameLogic.Share.isOver = false;
                 GameLogic.Share.isHelpStart = true;
                 GameLogic.Share.tempPlayerCount = 1;
                 GameLogic.Share.restartGame();
@@ -2012,7 +2036,9 @@
             this.pauseGame = false;
             this.gradeIndex = 0;
             this.tempPlayerCount = 0;
-            localStorage.clear();
+            this.isOver = false;
+            this.gotKillBossBounes = false;
+            this.hadAutoShowUpgrade = false;
             AdMgr.instance.initAd();
             Utility.loadJson('res/config/aiConfig.json', (data) => {
                 PlayerDataMgr.aiConfig = data;
@@ -2031,10 +2057,14 @@
                 localStorage.setItem('lastDate', new Date().getDate().toString());
                 localStorage.setItem('front_share_number', WxApi.front_share_number.toString());
             });
-            JJMgr.instance.initJJ(WxApi.version, () => {
-                WxApi.calculateShareNumber();
-                ShareMgr.instance.initShare();
-                this.loadAtlas();
+            WxApi.LoginWx((code, query) => {
+                JJMgr.instance.initJJ(code, WxApi.version, (openid) => {
+                    WxApi.calculateShareNumber();
+                    ShareMgr.instance.initShare();
+                    this.loadAtlas();
+                    Laya.Browser.window.wx.aldSendOpenid(openid);
+                    console.log('上报openid:', openid);
+                });
             });
         }
         loadAtlas() {
@@ -2292,11 +2322,25 @@
                 Laya.timer.clear(this, this.checkIsOver);
                 if (this.gradeIndex >= 4) {
                     this.tempPlayerCount = 0;
+                    WxApi.tempGrade = PlayerDataMgr.getPlayerData().grade;
                     PlayerDataMgr.getPlayerData().grade += 1;
                     PlayerDataMgr.getPlayerData().gradeIndex = 0;
                     PlayerDataMgr.setPlayerData();
                     Laya.Scene.close('MyScenes/GameUI.scene');
-                    Laya.Scene.open('MyScenes/KillBossUI.scene');
+                    Laya.Scene.open('MyScenes/KillBossUI.scene', true, () => {
+                        if (PlayerDataMgr.getPlayerData().grade - 1 >= JJMgr.instance.dataConfig.front_auto_history_level) {
+                            JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI, false, {
+                                closeCallbackFun: () => {
+                                    this._playerNode.active = true;
+                                    Laya.Scene.open('MyScenes/FinishUI.scene', false);
+                                }
+                            });
+                        }
+                        else {
+                            this._playerNode.active = true;
+                            Laya.Scene.open('MyScenes/FinishUI.scene', false);
+                        }
+                    });
                     this._playerNode.active = false;
                     return;
                 }
@@ -2322,9 +2366,30 @@
                     this.checkIsNeedCreatePlayer();
                 });
             }
-            if (this._playerNode.numChildren <= 0) {
+            if (this._playerNode.numChildren <= 0 && !this.isOver) {
+                this.isOver = true;
                 this.tempPlayerCount = 0;
-                GameUI.Share.visibleGameOverNode(true);
+                Laya.Scene.close('MyScenes/GameUI.scene');
+                let cb = () => {
+                    GameLogic.Share._playerNode.active = true;
+                    GameLogic.Share._aiNode.active = true;
+                    Laya.Scene.open('MyScenes/GameUI.scene', false, () => {
+                        GameUI.Share.visibleGameOverNode(true);
+                    });
+                };
+                GameLogic.Share._playerNode.active = false;
+                GameLogic.Share._aiNode.active = false;
+                WxApi.tempGrade = PlayerDataMgr.getPlayerData().grade;
+                Laya.Scene.open('MyScenes/KillBossUI.scene', false, () => {
+                    if (PlayerDataMgr.getPlayerData().grade >= JJMgr.instance.dataConfig.front_auto_history_level) {
+                        JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI, false, {
+                            closeCallbackFun: cb
+                        });
+                    }
+                    else {
+                        cb();
+                    }
+                });
             }
         }
         getIsOver() {
@@ -2376,12 +2441,15 @@
         }
         checkCanUpgrade() {
             let c = PlayerDataMgr.getPlayerData().coin;
-            if (PlayerDataMgr.getPlayerData().gradeIndex == 0 &&
+            if (!this.hadAutoShowUpgrade && PlayerDataMgr.getPlayerData().gradeIndex == 0 &&
                 (c >= PlayerDataMgr.getUpgradePlayerCountLvCost() || c >= PlayerDataMgr.getUpgradePlayerPowerLvCost() || c >= PlayerDataMgr.getUpgradeOfflineLvCost())) {
+                this.hadAutoShowUpgrade = true;
                 GameUI.Share.upgradeBtnCB();
             }
         }
         restartGame() {
+            this.isOver = false;
+            GameLogic.Share.gotKillBossBounes = false;
             this.gameStarted = false;
             if (PlayerDataMgr.getPlayerData().gradeIndex == 0) {
                 this._camera.transform.position = this.camStartPos;
@@ -2558,13 +2626,20 @@
                     let rp = Utility.getRandomItemInArr(this.fingerVecArr);
                     this['finger'].x = rp.x;
                     this['finger'].y = this.navList.y + rp.y;
+                    this['bounesCoin'].y = this.navList.y - 260;
                 }
                 if (param.from) {
                     this.from = param.from;
                 }
             }
-            if (PlayerDataMgr.getPlayerData().grade >= JJMgr.instance.dataConfig.front_auto_history_level)
-                JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI, false);
+            this['bounesCoin'].visible = GameLogic.Share.gotKillBossBounes;
+            if (GameLogic.Share.gotKillBossBounes) {
+                GameLogic.Share.gotKillBossBounes = false;
+                let c = Utility.GetRandom(300, 1000);
+                this['bounesCoin'].text = '成功领取' + c + '金币';
+                Utility.tMove2D(this['bounesCoin'], this['bounesCoin'].x, this['bounesCoin'].y - 100, 2000, () => { this['bounesCoin'].visible = false; });
+                PlayerDataMgr.changeCoin(c);
+            }
             this._init();
         }
         onClosed() {
@@ -2947,6 +3022,14 @@
             });
             this.starArr = Utility.shuffleArr(this.starArr);
             this.starArr = this.starArr.splice(0, 6);
+            this['bounesCoin'].visible = GameLogic.Share.gotKillBossBounes;
+            if (GameLogic.Share.gotKillBossBounes) {
+                GameLogic.Share.gotKillBossBounes = false;
+                let c = Utility.GetRandom(300, 1000);
+                this['bounesCoin'].text = '成功领取' + c + '金币';
+                Utility.tMove2D(this['bounesCoin'], this['bounesCoin'].x, this['bounesCoin'].y - 100, 2000, () => { this['bounesCoin'].visible = false; });
+                PlayerDataMgr.changeCoin(c);
+            }
         }
         onClosed() {
             Laya.timer.clearAll(this);
@@ -3456,20 +3539,38 @@
             this.clickBtn = this['clickBtn'];
             this.atkAni = this['atkAni'];
             this.curProgress = 0;
+            this.closeCallback = null;
+            this.hadShowBanner = false;
         }
         onOpened(param) {
+            if (param != null && param != undefined) {
+                this.closeCallback = param;
+            }
             this.atkAni.loop = false;
             this.closeBtn.on(Laya.Event.CLICK, this, this.closeBtnCB);
             this.clickBtn.on(Laya.Event.MOUSE_DOWN, this, this.clickBtnCBDown);
             this.clickBtn.on(Laya.Event.MOUSE_UP, this, this.clickBtnCBUp);
+            Utility.visibleDelay(this.closeBtn, 3000);
             Laya.timer.frameLoop(1, this, this.decBar);
+            WxApi.isKillBossUI = true;
+            WxApi.WxOnHide(() => {
+                if (WxApi.isKillBossUI) {
+                    Laya.timer.once(100, this, () => { Laya.Scene.close('MyScenes/KillBossUI.scene'); });
+                }
+            });
+            AdMgr.instance.hideBanner();
+            Laya.timer.once(5000, this, () => {
+                this.close();
+            });
         }
         onClosed() {
             Laya.timer.clearAll(this);
+            this.closeCallback && this.closeCallback();
+            WxApi.isKillBossUI = false;
         }
         decBar() {
             if (this.curProgress >= 1) {
-                Laya.timer.clearAll(this);
+                Laya.timer.clear(this, this.decBar);
                 return;
             }
             this.curProgress -= 0.005;
@@ -3479,17 +3580,25 @@
             this.barNode.value = this.curProgress;
         }
         clickBtnCBDown() {
+            GameLogic.Share.gotKillBossBounes = true;
+            let curG = WxApi.tempGrade;
+            let gGap = (curG - JJMgr.instance.dataConfig.front_box_gate) % (JJMgr.instance.dataConfig.front_box_everygate) == 0 &&
+                (curG - JJMgr.instance.dataConfig.front_box_gate) >= 0;
+            if (!this.hadShowBanner && curG >= JJMgr.instance.dataConfig.front_box_gate && gGap) {
+                this.hadShowBanner = true;
+                Laya.timer.once(1000, this, () => {
+                    AdMgr.instance.showBanner();
+                });
+            }
             this.atkAni.play(0, false);
             this.clickBtn.scaleX = 1.2;
             this.clickBtn.scaleY = 1.2;
-            this.curProgress += 0.2;
+            this.curProgress += 0.15;
             if (this.curProgress > 1) {
                 this.curProgress = 1;
                 this.barNode.value = 1;
+                this.close();
                 return;
-            }
-            if (this.curProgress >= 0.8) {
-                AdMgr.instance.showBanner();
             }
             this.createCoin();
             this.createCoin();
@@ -3507,10 +3616,10 @@
         createCoin() {
             let coin = PrefabManager.instance().getItem(PrefabItem.Coin);
             this.addChild(coin);
-            coin.pos(375, 520);
+            coin.pos(375, 500);
             let desPos = new Laya.Vector2(Math.random() * 400 - 200, Math.random() * 400 - 200);
-            Laya.Tween.to(coin, { x: desPos.x + 375, y: desPos.y + 520 }, 200);
-            Laya.timer.once(2000, this, () => {
+            Laya.Tween.to(coin, { x: desPos.x + 375, y: desPos.y + 500 }, 200);
+            Laya.timer.once(1000, this, () => {
                 coin.destroy();
             });
         }
@@ -3614,7 +3723,12 @@
                 WxApi.hadShowFriendUI = true;
                 JJMgr.instance.openScene(SceneDir.SCENE_FRIENDGAME, false, {
                     closeCallbackFun: () => {
-                        JJMgr.instance.openScene(SceneDir.SCENE_RECOMMENDUI);
+                        if (JJMgr.instance.dataConfig.front_index_video) {
+                            AdMgr.instance.showVideo(() => { });
+                        }
+                        else {
+                            JJMgr.instance.openScene(SceneDir.SCENE_RECOMMENDUI, false);
+                        }
                     }
                 });
             }

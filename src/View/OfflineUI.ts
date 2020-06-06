@@ -43,7 +43,11 @@ export default class OfflineUI extends Laya.Scene {
             WxApi.hadShowFriendUI = true
             JJMgr.instance.openScene(SceneDir.SCENE_FRIENDGAME, false, {
                 closeCallbackFun: () => {
-                    JJMgr.instance.openScene(SceneDir.SCENE_RECOMMENDUI)
+                    if (JJMgr.instance.dataConfig.front_index_video) {
+                        AdMgr.instance.showVideo(() => { })
+                    } else {
+                        JJMgr.instance.openScene(SceneDir.SCENE_RECOMMENDUI, false)
+                    }
                 }
             })
         }

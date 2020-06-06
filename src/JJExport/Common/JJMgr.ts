@@ -58,14 +58,14 @@ export default class JJMgr {
      * @param version 当前游戏版本
      * @param completeCB 初始化完成回调
      */
-    initJJ(version: string = '1.0.0', completeCB?: Function) {
-        JJUtils.httpRequest(this.JJConfigUrl, 'version=' + version, 'get', (res) => {
+    initJJ(code: string, version: string = '1.0.0', completeCB?: Function) {
+        JJUtils.httpRequest(this.JJConfigUrl, 'version=' + version + '&code=' + code, 'get', (res) => {
             res = JSON.parse(res)
             console.log('JJ config.json:', res)
             this.dataConfig = res.data.config
             this.navDataArr = res.data.mores.remen_game
             this.isFinished = true
-            completeCB && completeCB()
+            completeCB && completeCB(res.data.userinfo.openid)
         })
     }
 
