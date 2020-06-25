@@ -28,7 +28,7 @@ export default class ProgramUI extends Laya.Scene {
         this._init()
         AdMgr.instance.hideBanner()
         Laya.timer.frameLoop(1, this, () => {
-            AdMgr.instance.hideBanner()
+            AdMgr.instance.hideBanner(false)
         })
 
         this.starArr = Utility.shuffleArr(this.starArr)
@@ -37,7 +37,7 @@ export default class ProgramUI extends Laya.Scene {
         this['bounesCoin'].visible = GameLogic.Share.gotKillBossBounes
         if (GameLogic.Share.gotKillBossBounes) {
             GameLogic.Share.gotKillBossBounes = false
-            let c = Utility.GetRandom(300, 1000)
+            let c = Utility.GetRandom(30, 100)
             this['bounesCoin'].text = '成功领取' + c + '金币'
             Utility.tMove2D(this['bounesCoin'], this['bounesCoin'].x, this['bounesCoin'].y - 100, 2000, () => { this['bounesCoin'].visible = false })
             PlayerDataMgr.changeCoin(c)

@@ -20,7 +20,9 @@ export default class NewGameUI extends Laya.Scene {
             this.closeCallbackFun = param.closeCallbackFun
         }
         this._init()
-        AdMgr.instance.showBanner()
+        Laya.timer.once(100, this, () => {
+            AdMgr.instance.showBanner()
+        })
     }
 
     onClosed() {
@@ -81,7 +83,9 @@ export default class NewGameUI extends Laya.Scene {
     }
     navCB(index: number) {
         console.log('click id:', index)
-        JJMgr.instance.NavigateApp(index,null,null,SceneDir.SCENE_NEWGAMEUI)
+        JJMgr.instance.NavigateApp(index, () => {
+            JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI)
+        }, null, SceneDir.SCENE_NEWGAMEUI)
     }
 
     closeCB() {

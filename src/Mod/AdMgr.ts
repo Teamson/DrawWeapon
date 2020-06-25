@@ -73,11 +73,11 @@ export default class AdMgr {
         })
     }
     //隐藏banner
-    hideBanner() {
+    hideBanner(isCount: boolean = true) {
         if (Laya.Browser.onWeiXin) {
             this.bannerAd.hide()
 
-            if (JJMgr.instance.dataConfig != null && this.showBannerCount >= parseInt(JJMgr.instance.dataConfig.front_banner_number)) {
+            if (JJMgr.instance.dataConfig != null && this.showBannerCount >= parseInt(JJMgr.instance.dataConfig.front_banner_number) && isCount) {
                 this.showBannerCount = 0
                 this.curBannerId++
                 if (this.curBannerId >= this.bannerUnitId.length) {

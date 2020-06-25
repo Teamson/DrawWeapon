@@ -98,7 +98,11 @@ export default class GameUI extends Laya.Scene {
 
         SoundMgr.instance.playMusic('bgm.mp3')
 
-        AdMgr.instance.hideBanner()
+        if (GameLogic.Share.banGameUIBanner == false) {
+            AdMgr.instance.hideBanner()
+        } else {
+            GameLogic.Share.banGameUIBanner = true
+        }
     }
 
     onClosed() {
@@ -378,8 +382,6 @@ export default class GameUI extends Laya.Scene {
     visibleGameOverNode(visible: boolean) {
         if (visible && !this.gameOverNode.visible) {
             JJMgr.instance.closeScene(SceneDir.SCENE_DRAWUI)
-            //AdMgr.instance.showBanner()
-            AdMgr.instance.hideBanner()
             WxApi.fixBtnTouchPos(this.giveUpBtn, 300, 82, this)
             JJMgr.instance.openScene(SceneDir.SCENE_FINISHGAMEUI, false, { posY: 600, fixY: true })
         } else if (!visible) {
@@ -505,7 +507,8 @@ export default class GameUI extends Laya.Scene {
                 }
                 GameLogic.Share.pauseGame = false
                 JJMgr.instance.openScene(SceneDir.SCENE_DRAWUI, false, { autoTime: 1500 })
-            }
+            },
+            showContinue: true
         })
     }
 

@@ -41,10 +41,19 @@ export default class GameLogic {
 
     public isOver: boolean = false
 
-    public gotKillBossBounes:boolean = false
+    public banGameUIBanner: boolean = false
+
+    public gotKillBossBounes: boolean = false
 
     constructor() {
         //localStorage.clear()
+        //获取场景值
+        if (Laya.Browser.onWeiXin) {
+            WxApi.sceneId = WxApi.GetLaunchPassVar().scene
+            Laya.Browser.window.wx.onShow((para) => {
+                WxApi.sceneId = para.scene
+            })
+        }
         //初始化广告
         AdMgr.instance.initAd()
         //加载JSON
@@ -431,6 +440,7 @@ export default class GameLogic {
             //GameUI.Share.visibleGameOverNode(true)
             Laya.Scene.close('MyScenes/GameUI.scene')
             let cb = () => {
+                GameLogic.Share.banGameUIBanner = true
                 GameLogic.Share._playerNode.active = true
                 GameLogic.Share._aiNode.active = true
                 Laya.Scene.open('MyScenes/GameUI.scene', false, () => {

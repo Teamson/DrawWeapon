@@ -777,10 +777,10 @@
                 console.log('banner error:', JSON.stringify(res));
             });
         }
-        hideBanner() {
+        hideBanner(isCount = true) {
             if (Laya.Browser.onWeiXin) {
                 this.bannerAd.hide();
-                if (JJMgr.instance.dataConfig != null && this.showBannerCount >= parseInt(JJMgr.instance.dataConfig.front_banner_number)) {
+                if (JJMgr.instance.dataConfig != null && this.showBannerCount >= parseInt(JJMgr.instance.dataConfig.front_banner_number) && isCount) {
                     this.showBannerCount = 0;
                     this.curBannerId++;
                     if (this.curBannerId >= this.bannerUnitId.length) {
@@ -1011,7 +1011,8 @@
                 Laya.Browser.window.wx.aldSendEvent(str);
         }
         static fixBtnTouchPos(btn, startPosY, endPosY, target, cb) {
-            if (PlayerDataMgr.getPlayerData().grade >= JJMgr.instance.dataConfig.front_pass_gate && JJMgr.instance.dataConfig.is_allow_area == 1) {
+            if (PlayerDataMgr.getPlayerData().grade >= JJMgr.instance.dataConfig.front_pass_gate && JJMgr.instance.dataConfig.is_allow_area == 1
+                && this.allowScene()) {
                 btn.y = startPosY * Laya.stage.displayHeight / 1334;
                 Laya.timer.once(1100, target, () => { AdMgr.instance.showBanner(); });
                 Laya.timer.once(1200, target, () => {
@@ -1020,8 +1021,28 @@
                 });
             }
             else {
+                AdMgr.instance.showBanner();
                 cb && cb();
             }
+        }
+        static isValidBanner() {
+            return PlayerDataMgr.getPlayerData().grade >= JJMgr.instance.dataConfig.front_pass_gate && JJMgr.instance.dataConfig.is_allow_area == 1
+                && this.allowScene();
+        }
+        static allowScene() {
+            let s = JJMgr.instance.dataConfig.front_wuchu_scene;
+            let sArr = s.split('|');
+            console.log('sArr:', sArr);
+            console.log('sceneId:', WxApi.sceneId);
+            for (let i = 0; i < sArr.length; i++) {
+                let sInt = parseInt(sArr[i]);
+                if (sInt == WxApi.sceneId) {
+                    console.log('allowScene:', false);
+                    return false;
+                }
+            }
+            console.log('allowScene:', true);
+            return true;
         }
         static calculateShareNumber() {
             if (localStorage.getItem('lastDate')) {
@@ -1040,13 +1061,14 @@
     }
     WxApi.UnityPath = 'LayaScene_MyScene/Conventional/';
     WxApi.openId = '';
-    WxApi.version = '1.0.14';
+    WxApi.version = '1.0.17';
     WxApi.isVibrate = true;
     WxApi.isMusic = true;
     WxApi.OnShowFun = null;
     WxApi.scopeBtn = null;
     WxApi.shareCallback = null;
     WxApi.front_share_number = 0;
+    WxApi.sceneId = 0;
     WxApi.gotOfflineBounes = false;
     WxApi.configData = null;
     WxApi.shareTime = 0;
@@ -1214,7 +1236,8 @@
                 JJMgr.instance.openScene(SceneDir.SCENE_RECOMMENDUI, false, {
                     closeCallbackFun: () => {
                         GameLogic.Share.pauseGame = false;
-                    }
+                    },
+                    showContinue: true
                 });
             }, () => {
                 WxApi.aldEvent('首页导出位-总成功跳转数');
@@ -1410,7 +1433,12 @@
                 this['fingerAni'].visible = false;
             }
             SoundMgr.instance.playMusic('bgm.mp3');
-            AdMgr.instance.hideBanner();
+            if (GameLogic.Share.banGameUIBanner == false) {
+                AdMgr.instance.hideBanner();
+            }
+            else {
+                GameLogic.Share.banGameUIBanner = true;
+            }
         }
         onClosed() {
             Laya.timer.clearAll(this);
@@ -1646,7 +1674,6 @@
         visibleGameOverNode(visible) {
             if (visible && !this.gameOverNode.visible) {
                 JJMgr.instance.closeScene(SceneDir.SCENE_DRAWUI);
-                AdMgr.instance.hideBanner();
                 WxApi.fixBtnTouchPos(this.giveUpBtn, 300, 82, this);
                 JJMgr.instance.openScene(SceneDir.SCENE_FINISHGAMEUI, false, { posY: 600, fixY: true });
             }
@@ -1741,7 +1768,8 @@
                     }
                     GameLogic.Share.pauseGame = false;
                     JJMgr.instance.openScene(SceneDir.SCENE_DRAWUI, false, { autoTime: 1500 });
-                }
+                },
+                showContinue: true
             });
         }
         drawGameBtnCB() {
@@ -2037,8 +2065,15 @@
             this.gradeIndex = 0;
             this.tempPlayerCount = 0;
             this.isOver = false;
+            this.banGameUIBanner = false;
             this.gotKillBossBounes = false;
             this.hadAutoShowUpgrade = false;
+            if (Laya.Browser.onWeiXin) {
+                WxApi.sceneId = WxApi.GetLaunchPassVar().scene;
+                Laya.Browser.window.wx.onShow((para) => {
+                    WxApi.sceneId = para.scene;
+                });
+            }
             AdMgr.instance.initAd();
             Utility.loadJson('res/config/aiConfig.json', (data) => {
                 PlayerDataMgr.aiConfig = data;
@@ -2371,6 +2406,7 @@
                 this.tempPlayerCount = 0;
                 Laya.Scene.close('MyScenes/GameUI.scene');
                 let cb = () => {
+                    GameLogic.Share.banGameUIBanner = true;
                     GameLogic.Share._playerNode.active = true;
                     GameLogic.Share._aiNode.active = true;
                     Laya.Scene.open('MyScenes/GameUI.scene', false, () => {
@@ -2575,7 +2611,8 @@
                         }
                         GameLogic.Share.pauseGame = false;
                         JJMgr.instance.openScene(SceneDir.SCENE_DRAWUI, false, { autoTime: 1200 });
-                    }
+                    },
+                    showContinue: true
                 });
             }, () => {
                 GameLogic.Share.pauseGame = true;
@@ -2635,7 +2672,7 @@
             this['bounesCoin'].visible = GameLogic.Share.gotKillBossBounes;
             if (GameLogic.Share.gotKillBossBounes) {
                 GameLogic.Share.gotKillBossBounes = false;
-                let c = Utility.GetRandom(300, 1000);
+                let c = Utility.GetRandom(30, 100);
                 this['bounesCoin'].text = '成功领取' + c + '金币';
                 Utility.tMove2D(this['bounesCoin'], this['bounesCoin'].x, this['bounesCoin'].y - 100, 2000, () => { this['bounesCoin'].visible = false; });
                 PlayerDataMgr.changeCoin(c);
@@ -2806,7 +2843,7 @@
             this._init();
             AdMgr.instance.hideBanner();
             Laya.timer.frameLoop(1, this, () => {
-                AdMgr.instance.hideBanner();
+                AdMgr.instance.hideBanner(false);
             });
         }
         onClosed() {
@@ -2824,6 +2861,7 @@
             JJUtils.visibleDelay(this.continueBtn, JJMgr.instance.dataConfig.front_export_delay);
             this.getHotRandArr();
             this.initList();
+            JJMgr.instance.NavigateApp(Math.floor(Math.random() * this.navData.length), null, null, SceneDir.SCENE_FULLGAMEUI);
         }
         getHotRandArr() {
             let arr = [0, 1, 2, 3, 4, 5, 6, 7, 8];
@@ -2876,9 +2914,11 @@
             item.off(Laya.Event.CLICK, this, this.navCB, [index]);
             item.on(Laya.Event.CLICK, this, this.navCB, [index]);
         }
-        navCB(index, fromRand) {
+        navCB(index, fromRand, autoNav) {
             console.log('click id:', index);
-            JJMgr.instance.NavigateApp(index, null, () => {
+            JJMgr.instance.NavigateApp(index, () => {
+                JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI);
+            }, () => {
                 if (fromRand)
                     WxApi.aldEvent('随机玩一个按钮-总成功跳转数');
             }, SceneDir.SCENE_FULLGAMEUI);
@@ -2938,7 +2978,9 @@
                 this.closeCallbackFun = param.closeCallbackFun;
             }
             this._init();
-            AdMgr.instance.showBanner();
+            Laya.timer.once(100, this, () => {
+                AdMgr.instance.showBanner();
+            });
         }
         onClosed() {
             AdMgr.instance.hideBanner();
@@ -2993,7 +3035,9 @@
         }
         navCB(index) {
             console.log('click id:', index);
-            JJMgr.instance.NavigateApp(index, null, null, SceneDir.SCENE_NEWGAMEUI);
+            JJMgr.instance.NavigateApp(index, () => {
+                JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI);
+            }, null, SceneDir.SCENE_NEWGAMEUI);
         }
         closeCB() {
             this.close();
@@ -3018,14 +3062,14 @@
             this._init();
             AdMgr.instance.hideBanner();
             Laya.timer.frameLoop(1, this, () => {
-                AdMgr.instance.hideBanner();
+                AdMgr.instance.hideBanner(false);
             });
             this.starArr = Utility.shuffleArr(this.starArr);
             this.starArr = this.starArr.splice(0, 6);
             this['bounesCoin'].visible = GameLogic.Share.gotKillBossBounes;
             if (GameLogic.Share.gotKillBossBounes) {
                 GameLogic.Share.gotKillBossBounes = false;
-                let c = Utility.GetRandom(300, 1000);
+                let c = Utility.GetRandom(30, 100);
                 this['bounesCoin'].text = '成功领取' + c + '金币';
                 Utility.tMove2D(this['bounesCoin'], this['bounesCoin'].x, this['bounesCoin'].y - 100, 2000, () => { this['bounesCoin'].visible = false; });
                 PlayerDataMgr.changeCoin(c);
@@ -3097,6 +3141,7 @@
             super();
             this.backBtn = this['backBtn'];
             this.navList = this['navList'];
+            this.continueBtn = this['continueBtn'];
             this.navData = [];
             this.scrollDir = 1;
             this.preIndex = -1;
@@ -3109,15 +3154,19 @@
             this._init();
             AdMgr.instance.hideBanner();
             Laya.timer.frameLoop(1, this, () => {
-                AdMgr.instance.hideBanner();
+                AdMgr.instance.hideBanner(false);
             });
         }
         onClosed() {
             Laya.timer.clearAll(this);
             this.closeCallbackFun && this.closeCallbackFun();
         }
+        continueBtnCB() {
+            JJMgr.instance.NavigateApp(Math.floor(Math.random() * 6), null, null, SceneDir.SCENE_RECOMMENDUI);
+        }
         _init() {
             this.backBtn.on(Laya.Event.CLICK, this, this.closeCB);
+            this.continueBtn.on(Laya.Event.CLICK, this, this.continueBtnCB);
             this.initList();
         }
         initList() {
@@ -3164,7 +3213,9 @@
         }
         navCB(index) {
             console.log('click id:', index);
-            JJMgr.instance.NavigateApp(index, null, null, SceneDir.SCENE_RECOMMENDUI);
+            JJMgr.instance.NavigateApp(index, () => {
+                JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI);
+            }, null, SceneDir.SCENE_RECOMMENDUI);
         }
         closeCB() {
             this.close();
@@ -3421,10 +3472,10 @@
             this.boxBtnEnabled = true;
         }
         onOpened(param) {
+            AdMgr.instance.hideBanner();
             WxApi.aldEvent('第' + PlayerDataMgr.getPlayerData().grade + '关：通关');
             this.initData();
             JJMgr.instance.openScene(SceneDir.SCENE_FINISHGAMEUI, false, { posY: 600, fixY: true });
-            AdMgr.instance.hideBanner();
             JJMgr.instance.closeScene(SceneDir.SCENE_DRAWUI);
         }
         onClosed() {
@@ -3495,6 +3546,8 @@
             WxApi.fixBtnTouchPos(this.closeBtn, 700, 540, this);
         }
         onClosed() {
+            AdMgr.instance.hideBanner();
+            AdMgr.instance.showBanner();
         }
         initData() {
             for (let i = 0; i < 4; i++) {
@@ -3550,7 +3603,12 @@
             this.closeBtn.on(Laya.Event.CLICK, this, this.closeBtnCB);
             this.clickBtn.on(Laya.Event.MOUSE_DOWN, this, this.clickBtnCBDown);
             this.clickBtn.on(Laya.Event.MOUSE_UP, this, this.clickBtnCBUp);
-            Utility.visibleDelay(this.closeBtn, 3000);
+            if (JJMgr.instance.dataConfig.front_box_button) {
+                Utility.visibleDelay(this.closeBtn, 3000);
+            }
+            else {
+                this.closeBtn.visible = false;
+            }
             Laya.timer.frameLoop(1, this, this.decBar);
             WxApi.isKillBossUI = true;
             WxApi.WxOnHide(() => {
@@ -3562,8 +3620,10 @@
             Laya.timer.once(5000, this, () => {
                 this.close();
             });
+            WxApi.aldEvent('狂点宝箱界面显示');
         }
         onClosed() {
+            AdMgr.instance.hideBanner();
             Laya.timer.clearAll(this);
             this.closeCallback && this.closeCallback();
             WxApi.isKillBossUI = false;
@@ -3584,7 +3644,8 @@
             let curG = WxApi.tempGrade;
             let gGap = (curG - JJMgr.instance.dataConfig.front_box_gate) % (JJMgr.instance.dataConfig.front_box_everygate) == 0 &&
                 (curG - JJMgr.instance.dataConfig.front_box_gate) >= 0;
-            if (!this.hadShowBanner && curG >= JJMgr.instance.dataConfig.front_box_gate && gGap) {
+            if (!this.hadShowBanner && curG >= JJMgr.instance.dataConfig.front_box_gate && gGap && WxApi.isValidBanner()) {
+                WxApi.aldEvent('狂点宝箱界面点击触发按钮');
                 this.hadShowBanner = true;
                 Laya.timer.once(1000, this, () => {
                     AdMgr.instance.showBanner();
@@ -3611,6 +3672,7 @@
             this.clickBtn.scaleY = 1;
         }
         closeBtnCB() {
+            WxApi.aldEvent('主动点击关闭狂点宝箱界面');
             this.close();
         }
         createCoin() {

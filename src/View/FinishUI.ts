@@ -19,13 +19,12 @@ export default class FinishUI extends Laya.Scene {
 
     onOpened(param?: any) {
 
+        AdMgr.instance.hideBanner()
         WxApi.aldEvent('第' + PlayerDataMgr.getPlayerData().grade + '关：通关')
         this.initData()
 
         JJMgr.instance.openScene(SceneDir.SCENE_FINISHGAMEUI, false, { posY: 600, fixY: true })
 
-        //AdMgr.instance.showBanner()
-        AdMgr.instance.hideBanner()
         JJMgr.instance.closeScene(SceneDir.SCENE_DRAWUI)
     }
 

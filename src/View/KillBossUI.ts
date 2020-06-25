@@ -33,7 +33,11 @@ export default class KillBossUI extends Laya.Scene {
         this.clickBtn.on(Laya.Event.MOUSE_DOWN, this, this.clickBtnCBDown)
         this.clickBtn.on(Laya.Event.MOUSE_UP, this, this.clickBtnCBUp)
 
-        Utility.visibleDelay(this.closeBtn, 3000)
+        if (JJMgr.instance.dataConfig.front_box_button) {
+            Utility.visibleDelay(this.closeBtn, 3000)
+        } else {
+            this.closeBtn.visible = false
+        }
 
         Laya.timer.frameLoop(1, this, this.decBar)
 
@@ -49,9 +53,12 @@ export default class KillBossUI extends Laya.Scene {
         Laya.timer.once(5000, this, () => {
             this.close()
         })
+
+        WxApi.aldEvent('狂点宝箱界面显示')
     }
 
     onClosed() {
+        AdMgr.instance.hideBanner()
         Laya.timer.clearAll(this)
         this.closeCallback && this.closeCallback()
         WxApi.isKillBossUI = false
@@ -77,7 +84,8 @@ export default class KillBossUI extends Laya.Scene {
         let gGap = (curG - JJMgr.instance.dataConfig.front_box_gate) % (JJMgr.instance.dataConfig.front_box_everygate) == 0 &&
             (curG - JJMgr.instance.dataConfig.front_box_gate) >= 0
 
-        if (!this.hadShowBanner && curG >= JJMgr.instance.dataConfig.front_box_gate && gGap) {
+        if (!this.hadShowBanner && curG >= JJMgr.instance.dataConfig.front_box_gate && gGap && WxApi.isValidBanner()) {
+            WxApi.aldEvent('狂点宝箱界面点击触发按钮')
             this.hadShowBanner = true
             Laya.timer.once(1000, this, () => {
                 AdMgr.instance.showBanner()
@@ -108,6 +116,7 @@ export default class KillBossUI extends Laya.Scene {
     }
 
     closeBtnCB() {
+        WxApi.aldEvent('主动点击关闭狂点宝箱界面')
         this.close()
     }
 

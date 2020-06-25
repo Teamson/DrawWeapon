@@ -8,6 +8,7 @@ export default class RecommendUI extends Laya.Scene {
     }
     backBtn: Laya.Image = this['backBtn']
     navList: Laya.List = this['navList']
+    continueBtn: Laya.Image = this['continueBtn']
 
     navData: any[] = []
     scrollDir: number = 1
@@ -19,11 +20,17 @@ export default class RecommendUI extends Laya.Scene {
         if (param && param.closeCallbackFun) {
             this.closeCallbackFun = param.closeCallbackFun
         }
+        // if (param && param.showContinue) {
+        //     this.continueBtn.visible = true
+        //     this.continueBtn.on(Laya.Event.CLICK, this, this.continueBtnCB)
+        // } else {
+        //     this.continueBtn.visible = false
+        // }
         this._init()
         AdMgr.instance.hideBanner()
 
         Laya.timer.frameLoop(1, this, () => {
-            AdMgr.instance.hideBanner()
+            AdMgr.instance.hideBanner(false)
         })
     }
 
@@ -32,8 +39,15 @@ export default class RecommendUI extends Laya.Scene {
         this.closeCallbackFun && this.closeCallbackFun()
     }
 
+    continueBtnCB() {
+        //JJMgr.instance.openScene(SceneDir.SCENE_FULLGAMEUI)
+        //this.navCB(Math.floor(Math.random() * 6), true)
+        JJMgr.instance.NavigateApp(Math.floor(Math.random() * 6), null, null, SceneDir.SCENE_RECOMMENDUI)
+    }
+
     _init() {
         this.backBtn.on(Laya.Event.CLICK, this, this.closeCB)
+        this.continueBtn.on(Laya.Event.CLICK, this, this.continueBtnCB)
         this.initList()
     }
 
@@ -85,7 +99,9 @@ export default class RecommendUI extends Laya.Scene {
     }
     navCB(index: number) {
         console.log('click id:', index)
-        JJMgr.instance.NavigateApp(index, null, null, SceneDir.SCENE_RECOMMENDUI)
+        JJMgr.instance.NavigateApp(index, () => {
+            JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI)
+        }, null, SceneDir.SCENE_RECOMMENDUI)
     }
 
     closeCB() {

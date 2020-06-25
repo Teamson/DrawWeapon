@@ -27,7 +27,8 @@ export default class FreeSkinUI extends Laya.Scene {
     }
 
     onClosed() {
-        //AdMgr.instance.hideBanner()
+        AdMgr.instance.hideBanner()
+        AdMgr.instance.showBanner()
     }
 
     initData() {

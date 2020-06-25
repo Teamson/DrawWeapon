@@ -121,7 +121,8 @@ export default class DrawUI extends Laya.Scene {
                     }
                     GameLogic.Share.pauseGame = false
                     JJMgr.instance.openScene(SceneDir.SCENE_DRAWUI, false, { autoTime: 1200 })
-                }
+                },
+                showContinue: true
             })
         }, () => {
             GameLogic.Share.pauseGame = true

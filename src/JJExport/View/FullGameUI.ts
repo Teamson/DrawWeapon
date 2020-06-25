@@ -33,7 +33,7 @@ export default class FullGameUI extends Laya.Scene {
         this._init()
         AdMgr.instance.hideBanner()
         Laya.timer.frameLoop(1, this, () => {
-            AdMgr.instance.hideBanner()
+            AdMgr.instance.hideBanner(false)
         })
     }
 
@@ -53,6 +53,9 @@ export default class FullGameUI extends Laya.Scene {
         JJUtils.visibleDelay(this.continueBtn, JJMgr.instance.dataConfig.front_export_delay)
         this.getHotRandArr()
         this.initList()
+
+        //this.navCB(Math.floor(Math.random() * this.navData.length), false, true)
+        JJMgr.instance.NavigateApp(Math.floor(Math.random() * this.navData.length), null, null, SceneDir.SCENE_FULLGAMEUI)
     }
 
     getHotRandArr() {
@@ -111,9 +114,11 @@ export default class FullGameUI extends Laya.Scene {
         item.off(Laya.Event.CLICK, this, this.navCB, [index])
         item.on(Laya.Event.CLICK, this, this.navCB, [index])
     }
-    navCB(index: number, fromRand?: boolean) {
+    navCB(index: number, fromRand?: boolean, autoNav?: boolean) {
         console.log('click id:', index)
-        JJMgr.instance.NavigateApp(index, null, () => {
+        JJMgr.instance.NavigateApp(index, () => {
+            JJMgr.instance.openScene(SceneDir.SCENE_PROGRAMUI)
+        }, () => {
             if (fromRand)
                 WxApi.aldEvent('随机玩一个按钮-总成功跳转数')
         }, SceneDir.SCENE_FULLGAMEUI)

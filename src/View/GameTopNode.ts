@@ -88,7 +88,8 @@ export default class GameTopNode extends Laya.Script {
             JJMgr.instance.openScene(SceneDir.SCENE_RECOMMENDUI, false, {
                 closeCallbackFun: () => {
                     GameLogic.Share.pauseGame = false
-                }
+                },
+                showContinue: true
             })
         }, () => {
             WxApi.aldEvent('首页导出位-总成功跳转数')

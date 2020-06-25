@@ -6,13 +6,14 @@ export default class WxApi {
     public static UnityPath: string = 'LayaScene_MyScene/Conventional/'
 
     public static openId: string = ''
-    public static version: string = '1.0.14'
+    public static version: string = '1.0.17'
     public static isVibrate: boolean = true
     public static isMusic: boolean = true
     public static OnShowFun: Function = null
     public static scopeBtn: any = null
     public static shareCallback: Function = null
     public static front_share_number: number = 0
+    public static sceneId: number = 0
 
     public static gotOfflineBounes: boolean = false
     public static configData: any = null
@@ -198,7 +199,8 @@ export default class WxApi {
 
     //误触控制
     public static fixBtnTouchPos(btn, startPosY, endPosY, target, cb?: Function) {
-        if (PlayerDataMgr.getPlayerData().grade >= JJMgr.instance.dataConfig.front_pass_gate && JJMgr.instance.dataConfig.is_allow_area == 1) {
+        if (PlayerDataMgr.getPlayerData().grade >= JJMgr.instance.dataConfig.front_pass_gate && JJMgr.instance.dataConfig.is_allow_area == 1
+            && this.allowScene()) {
             btn.y = startPosY * Laya.stage.displayHeight / 1334
             Laya.timer.once(1100, target, () => { AdMgr.instance.showBanner() })
             Laya.timer.once(1200, target, () => {
@@ -206,8 +208,30 @@ export default class WxApi {
                 cb && cb()
             })
         } else {
+            AdMgr.instance.showBanner()
             cb && cb()
         }
+    }
+
+    public static isValidBanner() {
+        return PlayerDataMgr.getPlayerData().grade >= JJMgr.instance.dataConfig.front_pass_gate && JJMgr.instance.dataConfig.is_allow_area == 1
+            && this.allowScene()
+    }
+
+    public static allowScene() {
+        let s: string = JJMgr.instance.dataConfig.front_wuchu_scene
+        let sArr: string[] = s.split('|')
+        console.log('sArr:', sArr)
+        console.log('sceneId:', WxApi.sceneId)
+        for (let i = 0; i < sArr.length; i++) {
+            let sInt: number = parseInt(sArr[i])
+            if (sInt == WxApi.sceneId) {
+                console.log('allowScene:', false)
+                return false
+            }
+        }
+        console.log('allowScene:', true)
+        return true
     }
 
     //计算分享次数
